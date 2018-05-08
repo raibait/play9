@@ -1,0 +1,288 @@
+<head>
+<script src="https://unpkg.com/react@16.3.0/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@16.3.0/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/babel-standalone@6.26.0/babel.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" 
+integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+<link rel="stylesheet" type="text/css" href="style.css" >
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.10/css/all.css" 
+integrity="sha384-+d0P83n9kaQMCwj8F4RJB66tzIwOKmrdb46+porD/OvrJ+37WqIM7UoBtwHO6Nlg" crossorigin="anonymous">
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" 
+integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.6.0/underscore.js" type="text/javascript"></script>
+</head>
+<div id="root"></div>
+<script type="text/babel">
+
+var possibleCombinationSum = function(arr, n) {
+	if (arr.indexOf(n) >= 0) { return true; }
+	if (arr[0] > n) { return false; }
+	if (arr[arr.length - 1] > n) {
+		arr.pop();
+		return possibleCombinationSum(arr, n);
+	}
+	var listSize = arr.length, combinationsCount = (1 << listSize)
+	for (var i = 1; i < combinationsCount ; i++ ) {
+		var combinationSum = 0;
+		for (var j=0 ; j < listSize ; j++) {
+		if (i & (1 << j)) { combinationSum += arr[j]; }
+		}
+		if (n === combinationSum) { return true; }
+	}
+	return false;
+};
+
+const root = document.getElementById("root");
+
+const Stars = (props) =>{		
+	return (
+		<div className="col-5">
+			{_.range(props.numberOfStars).map (i => <i key = {i} className="fa fa-star"></i>)}
+		</div>
+	)
+};
+
+const Button = (props) =>{
+	let button;
+	switch(props.isAnswerCorrect){
+		case true:
+			button = 
+				<button className ="btn btn-success" onClick = {props.acceptAnswer}>
+					<i className="fa fa-check">	</i>		
+				</button>	
+			break;
+		case false:
+			button = 
+				<button className ="btn btn-danger">
+					<i className="fa fa-times">	</i>
+				</button>
+			break;
+		default:
+			button =
+			<button onClick={props.checkAnswer}
+					className ="btn" 
+					disabled ={props.answerNumbers.length === 0}>
+					=
+			</button>		
+			break;
+	}		
+	return (
+		<div className="col-2 text-center">	
+			{button}				
+			<br/> <br/>
+			<button onClick={props.redraw}
+					className="btn btn-warning btn-sm" disabled = {props.redraws ===0}>
+						<i className = "fa fa-refresh">ref {props.redraws}</i>
+			</button>
+		</div>
+	);
+};
+
+
+const Answer = (props) =>{
+	return (
+		<div className="col-5">			
+			{
+				props.answerNumbers.map ((number,i) => 
+				<span 
+					onClick ={()=>props.unselectNumber(number)}
+					key = {i} >{number}
+				</span>)
+			}			
+		</div>
+	);
+};
+
+const Numbers = (props) =>{	
+
+	const numberClassName = (number) =>{				
+		if(props.answerNumbers.indexOf(number)>=0)
+			return 'selected';		
+
+		if(props.usedNumbers.indexOf(number)>=0)
+			return 'used';		
+	}	
+
+	return(
+		<div  className = "card "  >	
+			<div className = "card-body  ">					
+				{Numbers.list.map((number,i)=>
+					<span key={i} className={numberClassName(number)} 
+						onClick={() => props.selectNumber(number)}>
+						{number}  
+					</span>				
+				)}					
+			</div>
+		</div>
+	);
+};
+Numbers.list = _.range(1,10);
+
+const DoneFrame = (props)=>(
+	<div className="text-center">
+	<h2>{props.doneStatus}</h2>
+	<button className ="btn btn-secondary" onClick={props.resetGame}>Jeszcze raz</button>
+	</div>
+);
+
+
+class Counter extends React.Component {	
+	render() {	
+		return (
+			<div>
+				<label>{this.props.lapse}s</label>
+			</div>
+		);
+	}
+}
+
+class Game extends React.Component {
+	static randomNumber = ()=>Math.floor((Math.random() * 9) + 1);
+	initialState= ()=>({
+		selectedNumbers:[],
+		usedNumbers:[],
+		numberOfStars: Game.randomNumber(),
+		isAnswerCorrect: null,
+		redraws: 5,
+		doneStatus: null,
+		lapse:300,
+		timeEnd:false			
+	});
+	state = this.initialState();
+	resetGame = ()=>{
+		return (
+			this.setState(this.initialState())			
+		)
+	};
+
+	resetTimer
+
+	selectNumber = (clickedNumber) => {
+		if(this.state.selectedNumbers.indexOf(clickedNumber)==-1)
+		this.setState(prevState =>({
+			isAnswerCorrect:null,// wyzerowanie wyniku po ponownym wyborze numeru
+			selectedNumbers: prevState.selectedNumbers.concat(clickedNumber)
+		}));
+	};
+
+	unselectNumber = (clickedNumber) => {		
+		this.setState(prevState =>({
+			isAnswerCorrect:null, // wyzerowanie wyniku po ponownym wyborze numeru
+			selectedNumbers: prevState.selectedNumbers.filter(number => number !== clickedNumber)
+		}));
+	};
+
+	checkAnswer = ()=>(
+		this.setState((prevState)=>({
+			isAnswerCorrect: prevState.numberOfStars === prevState.selectedNumbers.reduce((acc,n)=> acc + n, 0)				
+		}))		
+	);
+
+	acceptAnswer = ()=>(
+		this.setState((prevState)=>({
+			usedNumbers: prevState.usedNumbers.concat(prevState.selectedNumbers),
+			selectedNumbers: [],
+			isAnswerCorrect: null,
+			numberOfStars: Game.randomNumber()
+		}),this.updateDoneStatus)
+	);
+
+	redraw = ()=>(
+		this.setState((prevState)=>({				
+			selectedNumbers: [],
+			isAnswerCorrect: null,
+			numberOfStars: Game.randomNumber(),
+			redraws: prevState.redraws -1
+		}),this.updateDoneStatus)
+	);
+
+	possibleSolutions = ({numberOfStars,usedNumbers})=>{
+		const possibleNUmbers = _.range(1,10).filter(number => usedNumbers.indexOf(number)===-1);
+		return possibleCombinationSum(possibleNUmbers,numberOfStars);
+	};
+
+	updateDoneStatus = ()=>(
+		this.setState((prevState)=>{
+			if(prevState.usedNumbers.length === 9){
+				return {
+					doneStatus :'Wygrana',					
+				}
+			}
+			if((prevState.redraws === 0 && !this.possibleSolutions(prevState))||prevState.timeEnd){
+				return {
+					doneStatus :'Przegrana'				
+					}
+			}
+		})
+	);		
+
+	restartWatch = ()=>(this.setState({lapse: 60}));
+	decreaseCounter =()=>{		
+		this.setState((prevState)=>
+		{
+			if((prevState.lapse >0) && (this.state.doneStatus===null))
+			{	
+				return {lapse:prevState.lapse-1}
+			}else{
+				this.setState(({timeEnd:true}),this.updateDoneStatus);
+			}
+		})
+	}
+
+	startWatch =()=>{
+		setInterval(()=>{		
+			this.decreaseCounter();				
+		},1000);
+	};
+
+	componentDidMount() {
+		this.startWatch();
+	}
+	render(){
+		
+		const {numberOfStars,selectedNumbers,isAnswerCorrect,usedNumbers,redraws,doneStatus,lapse,timeEnd} = this.state;
+		return(
+			<div className = "container">
+				<h3>Play Nine</h3>
+				<hr/>
+				<div className ="row">
+					<Stars numberOfStars = {numberOfStars}/>
+					<Button answerNumbers = {selectedNumbers}
+							checkAnswer = {this.checkAnswer}
+							isAnswerCorrect = {isAnswerCorrect}
+							acceptAnswer = {this.acceptAnswer}
+							redraw = {this.redraw}
+							redraws = {redraws}/>
+					<Answer unselectNumber = {this.unselectNumber}
+							answerNumbers = {selectedNumbers}/>
+				</div>
+				{doneStatus?
+					<DoneFrame doneStatus = {doneStatus}
+								resetGame={this.resetGame}/>:
+					<Numbers answerNumbers = {selectedNumbers} 
+							selectNumber = {this.selectNumber}
+							usedNumbers = {usedNumbers}/>	
+									
+				}
+				<Counter lapse = {lapse}/>
+			</div>
+		);
+	};
+};
+
+
+
+class App extends React.Component {
+	render(){
+		return(
+			<Game/>				
+		);
+	};
+};
+
+	ReactDOM.render(<App/>,root);
+</script>
+
+
